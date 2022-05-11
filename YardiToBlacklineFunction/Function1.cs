@@ -58,8 +58,37 @@ namespace YardiToBlacklineFunction
             using (SqlConnection conn = new SqlConnection ( str ))
             {
                 conn.Open ();
+                //check batch
+                var batchsql = "SELECT * FROM Batching WHERE  [LastrunDateTime] = (SELECT MAX([LastrunDateTime]) FROM Batching) ";
+                int startcount = 0;
+                int endcount = 100;
+                using (SqlCommand cmd = new SqlCommand ( batchsql, conn ))
+                {
+                    SqlDataReader dr = cmd.ExecuteReader ();
+                    while (dr.Read ())
+                    {
+                        startcount = int.Parse(dr[2].ToString ());
+                        startcount++;
+                        endcount = startcount + 100;
+                    }
+                    dr.Close ();
+                }
+                //update batch
+                //INSERT INTO[dbo].[Batching] ([LastrunDateTime],[StartCount],[Endcount]) VALUES
+                using (SqlCommand command = conn.CreateCommand ())
+                {
+                    command.CommandText = "INSERT INTO Batching (LastrunDateTime, StartCount, Endcount)  VALUES ( @ln, @fn, @add )";
+
+   command.Parameters.AddWithValue ( "@ln", DateTime.Now );
+                    command.Parameters.AddWithValue ( "@fn", startcount );
+                    command.Parameters.AddWithValue ( "@add", endcount );
+
+                    command.ExecuteNonQuery ();
+                }
+
+                //get data
                 var text = "  declare @selectPeriodDate Date = '2022-03-31' " +
-" select top 1 'PRO-C' + char(9) + AccountNumber + char(9) + PropertyID + char(9) " +
+" select 'PRO-C' + char(9) + AccountNumber + char(9) + PropertyID + char(9) " +
 "                               + Region + char(9) + Department + char(9)  " +
 "							   + Acquisition_Portfolio + char(9) + Sub_Region + char(9) + Cash_Entity + char(9) + Tenant_Code + char(9) + isnull(Book,'') + char(9) + AccountDescription  " +
 "							   + char(9) + 'cash' + char(9) + FinancialStatement	 + char(9) + 'Asset'  " +
@@ -70,7 +99,7 @@ namespace YardiToBlacklineFunction
 "		 CONVERT(varchar,AccountNumber)+ '|' + CONVERT(varchar,PropertyID) +'|'  " +
 "		 + CONVERT(varchar,@selectPeriodDate) +'|' + ISNULL(CONVERT(varchar,Book),0)  AS logid, " +
 "		 GLAccountBalance " +
-" from [dbo].[AccountsGL]";
+" from [dbo].[AccountsGL] where id>" + startcount + " and id<=" + endcount;
 
                 using (SqlCommand cmd = new SqlCommand ( text, conn ))
                 {
@@ -109,7 +138,7 @@ namespace YardiToBlacklineFunction
                         }
                         finally
                         {
-                           
+
                         }
                     }
                 }
