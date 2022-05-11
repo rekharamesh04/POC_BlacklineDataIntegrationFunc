@@ -68,7 +68,6 @@ namespace YardiToBlacklineFunction
                     while (dr.Read ())
                     {
                         startcount = int.Parse(dr[2].ToString ());
-                        startcount++;
                         endcount = startcount + 100;
                     }
                     dr.Close ();
